@@ -21,7 +21,7 @@ app = Flask(__name__)
 # process managers. Without a handler it would also leave the port occupied.
 #
 # Ctrl-C sends SIGINT, which Flask/Python already handles — no change needed there.
-def _shutdown(sig, frame):
+def _shutdown(_sig, _frame):
     sys.exit(0)
 
 signal.signal(signal.SIGHUP, _shutdown)
