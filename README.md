@@ -6,6 +6,7 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 - Python 3.14, Flask, psycopg2-binary, requests, python-dotenv
 - PostgreSQL 18
+- Claude Code
 
 ## Setup
 
@@ -33,4 +34,4 @@ python3 client.py
 
 ## Database
 
-PostgreSQL database `devproject`, user `ty`, localhost. Stores messages in a `messages (id, message, response, created_at)` table.
+PostgreSQL database `devproject`, user `USERNAME`, localhost. Stores messages in a `messages (id, message, response, created_at)` table.
