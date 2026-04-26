@@ -32,7 +32,7 @@ gunicorn --bind 0.0.0.0:8000 server:app
 
 Start **nginx** in another terminal:
 ```bash
-nginx -c /home/ty/Desktop/code/dev-project/nginx.conf
+nginx -c /FULL_PATH_TO_FILE/nginx.conf
 ```
 
 Start the **client** in another terminal:
@@ -42,7 +42,7 @@ python3 client.py
 
 Stop nginx when done:
 ```bash
-nginx -c /home/ty/Desktop/code/dev-project/nginx.conf -s stop
+nginx -c /FULL_PATH_TO_FILE/nginx.conf -s stop
 ```
 
 > For quick dev without nginx/gunicorn, `python3 server.py` still works (Flask on port 5000 directly).

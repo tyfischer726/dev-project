@@ -1,6 +1,7 @@
 import requests
 
 SERVER_URL = "http://localhost:8080/message"
+#SERVER_URL = "http://localhost:5000/message" # For local testing without nginx or gunicorn
 
 def send_message(message):
     resp = requests.post(SERVER_URL, json={"message": message})
