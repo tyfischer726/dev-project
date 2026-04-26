@@ -1,6 +1,4 @@
 import os
-import signal
-import sys
 import psycopg2
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -8,24 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-
-# Register handlers for SIGHUP and SIGTERM so the process exits cleanly instead
-# of lingering after the terminal is closed.
-#
-# SIGHUP is sent by the OS when the controlling terminal closes (e.g. you shut
-# the terminal window without pressing Ctrl-C first). Some terminal emulators
-# don't send it reliably, which is what causes the "port already in use" error
-# the next time you try to start the server.
-#
-# SIGTERM is the standard "please stop" signal sent by tools like `kill` or
-# process managers. Without a handler it would also leave the port occupied.
-#
-# Ctrl-C sends SIGINT, which Flask/Python already handles — no change needed there.
-def _shutdown(_sig, _frame):
-    sys.exit(0)
-
-signal.signal(signal.SIGHUP, _shutdown)
-signal.signal(signal.SIGTERM, _shutdown)
 
 def get_db():
     return psycopg2.connect(

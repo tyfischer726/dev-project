@@ -4,7 +4,7 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 ## Stack
 
-- Python 3.14, Flask, psycopg2-binary, requests, python-dotenv
+- Python 3.14, Flask, Gunicorn, nginx, psycopg2-binary, requests, python-dotenv
 - PostgreSQL 18
 - Claude Code
 
@@ -25,15 +25,27 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 ## Running
 
-Start the server in one terminal:
+Start **gunicorn** in one terminal:
 ```bash
-python3 server.py
+gunicorn --bind 0.0.0.0:8000 server:app
 ```
 
-Start the client in another terminal:
+Start **nginx** in another terminal:
+```bash
+nginx -c /home/ty/Desktop/code/dev-project/nginx.conf
+```
+
+Start the **client** in another terminal:
 ```bash
 python3 client.py
 ```
+
+Stop nginx when done:
+```bash
+nginx -c /home/ty/Desktop/code/dev-project/nginx.conf -s stop
+```
+
+> For quick dev without nginx/gunicorn, `python3 server.py` still works (Flask on port 5000 directly).
 
 ## Database
 
