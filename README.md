@@ -10,8 +10,11 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 ## Setup
 
-1. Create a `.env` file with your database password:
+1. Create a `.env` file with your database credentials:
    ```
+   DB_NAME=devproject
+   DB_USER=your_username
+   DB_HOST=localhost
    DB_PASSWORD=your_password
    ```
 
@@ -34,4 +37,4 @@ python3 client.py
 
 ## Database
 
-PostgreSQL database `devproject`, user `USERNAME`, localhost. Stores messages in a `messages (id, message, response, created_at)` table.
+PostgreSQL database configured via `.env`. Stores messages in a `messages (id, message, response, created_at)` table.

@@ -9,10 +9,10 @@ app = Flask(__name__)
 
 def get_db():
     return psycopg2.connect(
-        dbname="devproject",
-        user="ty",
+        dbname=os.environ["DB_NAME"],
+        user=os.environ["DB_USER"],
         password=os.environ["DB_PASSWORD"],
-        host="localhost"
+        host=os.environ["DB_HOST"]
     )
 
 @app.route("/message", methods=["POST"])
