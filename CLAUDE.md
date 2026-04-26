@@ -13,28 +13,36 @@ A simple client-server-database app for learning purposes. The user types a mess
 - Flask (HTTP server)
 - requests (HTTP client)
 - psycopg2-binary (PostgreSQL driver)
+- python-dotenv (env var loading)
 - PostgreSQL 18 (local)
 
 ## Environment
 - Virtual env: `../environments/dev_env/` (relative to project root)
-- Always run Python via: `/home/ty/Desktop/code/environments/dev_env/bin/python3`
-- Install packages via: `/home/ty/Desktop/code/environments/dev_env/bin/python3 -m pip install ...`
+- Activate: `source ../environments/dev_env/bin/activate` (then use `python3` normally)
+- Install packages via: `pip install ...` (when venv is active) or `/home/ty/Desktop/code/environments/dev_env/bin/python3 -m pip install ...`
+- Dependencies tracked in `requirements.txt`
 
 ## Database
 - Name: `devproject`
-- User: `ty` (OS peer auth, no password)
-- Host: Unix socket (no host specified) — uses OS peer auth, no password needed locally
+- User: `ty`
+- Host: `localhost` (TCP) — password auth via `DB_PASSWORD` env var
 - Table: `messages (id, message, response, created_at)`
+- Credentials stored in `.env` (gitignored)
 
 ## Running locally
+Activate the venv first (once per terminal session):
+```bash
+source ../environments/dev_env/bin/activate
+```
+
 Start the server in one terminal:
 ```bash
-/home/ty/Desktop/code/environments/dev_env/bin/python3 server.py
+python3 server.py
 ```
 
 Start the client in another terminal:
 ```bash
-/home/ty/Desktop/code/environments/dev_env/bin/python3 client.py
+python3 client.py
 ```
 
 ## Future: Docker
