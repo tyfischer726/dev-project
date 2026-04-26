@@ -12,7 +12,7 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 1. Create a `.env` file with your database credentials:
    ```
-   DB_NAME=devproject
+   DB_NAME=your_dbname
    DB_USER=your_username
    DB_HOST=localhost
    DB_PASSWORD=your_password
