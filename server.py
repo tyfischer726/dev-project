@@ -7,6 +7,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
+
 def get_db():
     return psycopg2.connect(
         dbname=os.environ["DB_NAME"],
@@ -14,6 +15,7 @@ def get_db():
         password=os.environ["DB_PASSWORD"],
         host=os.environ["DB_HOST"]
     )
+
 
 @app.route("/message", methods=["POST"])
 def receive_message():
@@ -35,6 +37,7 @@ def receive_message():
 
     print(f"Logged to DB — message: '{message}'")
     return jsonify({"response": response})
+
 
 if __name__ == "__main__":
     app.run(port=5000)

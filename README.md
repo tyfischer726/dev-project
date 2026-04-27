@@ -6,6 +6,7 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 - Python 3.14, Flask, Gunicorn, nginx, psycopg2-binary, requests, python-dotenv
 - PostgreSQL 18
+- pytest, flake8 (CI)
 - Claude Code
 
 ## Setup
@@ -46,6 +47,15 @@ nginx -c /FULL_PATH_TO_FILE/nginx.conf -s stop
 ```
 
 > For quick dev without nginx/gunicorn, `python3 server.py` still works (Flask on port 5000 directly).
+
+## Testing
+
+```bash
+python3 -m pytest test_server.py -v    # 7 unit tests (no DB required)
+python3 -m flake8 server.py client.py  # lint
+```
+
+CI runs both automatically on push via GitHub Actions.
 
 ## Database
 
