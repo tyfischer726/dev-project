@@ -1,7 +1,7 @@
 import os
+from dotenv import load_dotenv
 import psycopg2
 from flask import Flask, request, jsonify
-from dotenv import load_dotenv
 
 load_dotenv()
 
