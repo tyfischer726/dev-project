@@ -9,7 +9,44 @@ A simple client-server-database app for learning purposes. Type a message in the
 - pytest, flake8 (CI)
 - Claude Code
 
-## Setup
+## Running with Docker
+
+All Docker files live in `phase2/`. This runs 4 containers: `db`, `server`, `nginx`, and `client`.
+
+1. Create a `phase2/.env` file:
+   ```
+   DB_NAME=your_dbname
+   DB_USER=your_username
+   DB_HOST=db
+   DB_PASSWORD=your_password
+   ```
+   > `DB_HOST` must be `db` (the Docker service name), not `localhost`.
+
+2. Start the backend services:
+   ```bash
+   cd phase2
+   docker compose up --build -d db server nginx
+   ```
+
+3. Run the client interactively:
+   ```bash
+   docker compose run --rm client
+   ```
+
+4. Stop everything when done:
+   ```bash
+   docker compose down
+   ```
+   To also wipe the database volume: `docker compose down -v`
+
+**Useful commands:**
+```bash
+docker compose logs db                                              # view db logs
+docker compose logs -f db                                          # follow db logs
+docker compose exec db psql -U <user> -d <dbname> -c "SELECT * FROM messages;"  # query the DB
+```
+
+## Running locally (without Docker)
 
 1. Create a `.env` file with your database credentials:
    ```
@@ -19,12 +56,11 @@ A simple client-server-database app for learning purposes. Type a message in the
    DB_PASSWORD=your_password
    ```
 
-2. Install dependencies:
+2. Activate the virtual environment and install dependencies:
    ```bash
+   source ../environments/dev_env/bin/activate
    pip install -r requirements.txt
    ```
-
-## Running
 
 Start **gunicorn** in one terminal:
 ```bash
@@ -60,3 +96,5 @@ CI runs both automatically on push via GitHub Actions.
 ## Database
 
 PostgreSQL database configured via `.env`. Stores messages in a `messages (id, message, response, created_at)` table.
+
+When running with Docker, data is stored in a named Docker volume (`phase2_postgres_data`) and persists across restarts. It is only deleted with `docker compose down -v`.
