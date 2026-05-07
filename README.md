@@ -98,3 +98,5 @@ CI runs both automatically on push via GitHub Actions.
 PostgreSQL database configured via `.env`. Stores messages in a `messages (id, message, response, created_at)` table.
 
 When running with Docker, data is stored in a named Docker volume (`phase2_postgres_data`) and persists across restarts. It is only deleted with `docker compose down -v`.
+
+Services are split across two custom bridge networks for isolation: `db` is only reachable by `server` (via `app-backend-network`); `nginx` and `client` communicate with `server` over `app-frontend-network` and cannot reach `db` directly.
