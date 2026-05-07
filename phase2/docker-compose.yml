@@ -11,6 +11,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -23,6 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile.server
     env_file: .env
+    networks:
+      - frontend
+      - backend
     expose:
       - "8000"
     depends_on:
@@ -31,6 +36,8 @@ services:
 
   nginx:
     image: nginx:alpine
+    networks:
+      - frontend
     ports:
       - "8080:80"
     volumes:
@@ -44,8 +51,18 @@ services:
       dockerfile: Dockerfile.client
     stdin_open: true
     tty: true
+    networks:
+      - frontend
     depends_on:
       - nginx
 
 volumes:
   postgres_data:
+
+networks:
+  frontend:
+    driver: bridge
+    name: app-frontend-network
+  backend:
+    driver: bridge
+    name: app-backend-network
