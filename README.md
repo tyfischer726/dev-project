@@ -4,7 +4,7 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 ## Stack
 
-- Python 3.14, Flask, Gunicorn, nginx, psycopg2-binary, requests, python-dotenv
+- Python 3.14, Flask, Gunicorn, nginx
 - PostgreSQL 18
 - pytest, flake8 (CI)
 - Claude Code
@@ -92,6 +92,66 @@ python3 -m flake8 server.py client.py  # lint
 ```
 
 CI runs both automatically on push via GitHub Actions.
+
+## Running with Kubernetes (minikube)
+
+All Kubernetes manifests live in `phase2-k8s/`. Requires minikube and kubectl.
+
+1. Start minikube:
+   ```bash
+   minikube start
+   ```
+
+2. Build images directly into minikube's Docker daemon (no registry needed):
+   ```bash
+   cd phase2-k8s
+   ./build-images.sh
+   ```
+
+3. Apply all manifests:
+   ```bash
+   kubectl apply -f secret.yaml
+   kubectl apply -f db.yaml
+   kubectl apply -f server.yaml
+   kubectl apply -f nginx.yaml
+   ```
+   > You can also apply all at once with `kubectl apply -f phase2-k8s/`
+
+4. Wait for pods to be ready:
+   ```bash
+   kubectl get pods -w
+   ```
+   The `server` pod waits for the DB automatically via an init container.
+
+5. Run the client:
+   ```bash
+   kubectl run client --image=client:latest --image-pull-policy=Never -it --restart=Never --rm
+   ```
+
+6. Tear down:
+   ```bash
+   kubectl delete -f phase2-k8s/   # remove all k8s resources (including DB data)
+   minikube stop                    # stop the cluster
+   minikube delete                  # delete the cluster entirely
+   ```
+   > To preserve DB data, avoid `minikube delete` — it destroys the entire cluster including all persistent volumes. Instead, only delete the app resources and stop (don't delete) minikube:
+   > ```bash
+   > kubectl delete -f phase2-k8s/server.yaml
+   > kubectl delete -f phase2-k8s/nginx.yaml
+   > minikube stop
+   > ```
+   > Leave `db.yaml` and `secret.yaml` in place. On next startup, run `minikube start` then re-apply only `server.yaml` and `nginx.yaml` — images and DB data both survive `minikube stop`.
+
+**Useful commands:**
+```bash
+kubectl get pods                                                              # find the db pod name
+kubectl exec -it <db-pod-name> -- psql -U ty -d devproject -c "SELECT * FROM messages;"  # query the DB
+```
+
+**Key details:**
+- `secret.yaml` must be applied before `db.yaml`/`server.yaml` since both reference `db-secret`
+- `imagePullPolicy: Never` tells Kubernetes to use the locally-built image instead of pulling from Docker Hub
+- nginx listens on port 80 internally; the client talks to it via the `nginx` ClusterIP service
 
 ## Database
 
