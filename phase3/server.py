@@ -1,0 +1,43 @@
+import os
+from dotenv import load_dotenv
+import psycopg2
+from flask import Flask, request, jsonify
+
+load_dotenv()
+
+app = Flask(__name__)
+
+
+def get_db():
+    return psycopg2.connect(
+        dbname=os.environ["DB_NAME"],
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        host=os.environ["DB_HOST"]
+    )
+
+
+@app.route("/message", methods=["POST"])
+def receive_message():
+    data = request.get_json()
+    message = data.get("message", "")
+
+    response = f"Server received: '{message}'"
+
+    # Log the message and response to the database
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO messages (message, response) VALUES (%s, %s)",
+        (message, response)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    print(f"Logged to DB — message: '{message}'")
+    return jsonify({"response": response})
+
+
+if __name__ == "__main__":
+    app.run(port=5000)
