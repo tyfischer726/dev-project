@@ -153,6 +153,26 @@ kubectl exec -it <db-pod-name> -- psql -U ty -d devproject -c "SELECT * FROM mes
 - `imagePullPolicy: Never` tells Kubernetes to use the locally-built image instead of pulling from Docker Hub
 - nginx listens on port 80 internally; the client talks to it via the `nginx` ClusterIP service
 
+## Running on AWS (EC2 + RDS)
+
+All AWS files live in `phase3/`. Full step-by-step deployment instructions are in `phase3/PHASE3.md`.
+
+The setup runs nginx + server as Docker Compose containers on a single EC2 t2.micro, with RDS PostgreSQL as the database. The local `client.py` connects to the EC2 public IP over the internet.
+
+**Key details:**
+- All AWS resources are configured via the AWS Console — no local AWS CLI needed
+- Terminal work on EC2 (Docker install, git clone, docker compose) is done via EC2 Instance Connect (browser-based terminal in the Console)
+- A custom VPC (`dev-project-vpc`) is used instead of the default VPC: EC2 sits in a public subnet, RDS in private subnets with no internet route
+- The SSH inbound rule for EC2 must use the EC2 Instance Connect IP range (`18.206.107.24/29` for us-east-1), not "My IP" — browser-based Instance Connect routes through AWS's servers
+- Amazon Linux 2023's bundled Docker Buildx is too old for the latest Docker Compose plugin — install the latest buildx from GitHub (see PHASE3.md Step 4)
+- RDS requires a DB subnet group with subnets in at least 2 AZs, even for a single-AZ deployment
+- The `devproject` database must be created under **Additional configuration** during RDS setup, or manually via `psql` afterwards
+
+**Restart containers after stopping:**
+```bash
+docker compose up -d   # no --build needed unless code changed
+```
+
 ## Database
 
 PostgreSQL database configured via `.env`. Stores messages in a `messages (id, message, response, created_at)` table.

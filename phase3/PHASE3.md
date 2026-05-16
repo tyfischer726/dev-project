@@ -10,7 +10,7 @@ Tooling: AWS Console for all resource creation. Terminal work (Docker install, g
 ```
 dev-project-vpc (10.0.0.0/16)
 ├── public subnet 10.0.1.0/24 (AZ-a)
-│     └── EC2 t2.micro ← Elastic IP (port 80)
+│     └── EC2 t2.micro ← public IP / Elastic IP (port 80)
 │           [Docker Compose]
 │             ├── nginx  (host 80 → container 80)
 │             └── server (port 8000, internal only)
@@ -20,7 +20,7 @@ dev-project-vpc (10.0.0.0/16)
       └── RDS db.t3.micro (PostgreSQL, not publicly accessible)
 ```
 
-The local `client.py` connects to `http://<elastic-ip>/message`.
+The local `client.py` connects to `http://<public-ip>/message`.
 
 ## Files in phase3/
 
@@ -44,7 +44,7 @@ The local `client.py` connects to `http://<elastic-ip>/message`.
 ---
 
 ## Current Status
-**All local files are complete.** Next step: begin AWS setup at Step 1 (VPC & Networking).
+**Complete and working.** EC2 + RDS deployed in `dev-project-vpc`. Client connects to EC2 public IP over the internet.
 
 ---
 
@@ -97,8 +97,10 @@ Console: EC2 → Security Groups → Create security group. **Set VPC to `dev-pr
 | Rule | Port | Source |
 |------|------|--------|
 | Inbound | 80 | `0.0.0.0/0` (nginx, public) |
-| Inbound | 22 | My IP (EC2 Instance Connect fallback) |
+| Inbound | 22 | `18.206.107.24/29` (EC2 Instance Connect IP range for us-east-1) |
 | Outbound | all | `0.0.0.0/0` |
+
+Note: browser-based EC2 Instance Connect routes through AWS's servers, not your local IP — so the SSH rule must allow AWS's IP range, not "My IP". The range above is specific to us-east-1.
 
 **rds-sg**
 | Rule | Port | Source |
@@ -144,16 +146,25 @@ sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 docker compose version   # verify
 ```
 
-### 5. Elastic IP
+Install Docker Buildx plugin (Amazon Linux 2023 ships with an older version that Docker Compose requires to be updated):
+```bash
+sudo curl -SL $(curl -s https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep "browser_download_url.*linux-amd64\"" | cut -d'"' -f4) \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+docker buildx version   # verify
+```
+
+### 5. Elastic IP (optional)
 Console: EC2 → Elastic IPs → Allocate Elastic IP address → Associate with your EC2 instance.
 
-This is the permanent IP your `client.py` will point at.
+This gives you a permanent IP that survives instance stop/start. Without it, the EC2 auto-assigned public IP changes every time the instance is stopped — meaning you'd have to update `SERVER_URL` in `client.py` each time. For a PoC where you leave the instance running, the auto-assigned IP is fine.
 
 ### 6. Clone the Repo on EC2
 In the EC2 Instance Connect terminal:
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>/phase3
+git clone https://github.com/tyfischer726/dev-project.git
+cd dev-project/phase3
 ```
 
 ### 7. Configure Environment on EC2
@@ -162,12 +173,26 @@ cp .env.template .env
 nano .env   # fill in DB_PASSWORD and DB_HOST (the RDS endpoint)
 ```
 
+Find the RDS endpoint: RDS → Databases → click your instance → **Connectivity & security** tab → Endpoint. It looks like `database-1.xxxxxxxxxxxx.us-east-1.rds.amazonaws.com`.
+
 ### 8. Initialize RDS Schema
 Install the PostgreSQL client on EC2, then run `init.sql`:
 ```bash
 sudo dnf install -y postgresql15
-psql -h <rds-endpoint> -U ty -d devproject -f ~/phase3/init.sql
+psql -h <rds-endpoint> -U ty -d devproject -f init.sql
 ```
+
+Note: you may see a warning about psql major version 15 vs server major version 18 — this is harmless for basic operations.
+
+If you didn't set an initial database name during RDS setup, the `devproject` database won't exist yet. Create it first:
+```bash
+psql -h <rds-endpoint> -U ty -d postgres
+```
+```sql
+CREATE DATABASE devproject;
+\q
+```
+Then run `init.sql` as above.
 
 ### 9. Start the App
 ```bash
@@ -180,7 +205,7 @@ docker compose logs -f  # tail logs to verify no errors
 ### 10. Test End-to-End
 Update `SERVER_URL` in your local `phase3/client.py`:
 ```python
-SERVER_URL = "http://<elastic-ip>/message"
+SERVER_URL = "http://<ec2-public-ip>/message"   # Elastic IP if you allocated one
 ```
 Run the client locally:
 ```bash
@@ -200,12 +225,12 @@ cd ~/<your-repo>/phase3 && docker compose down
 ```
 
 Then in the AWS Console (to avoid ongoing charges):
-1. Disassociate and release the Elastic IP
+1. Disassociate and release the Elastic IP (if allocated)
 2. Terminate the EC2 instance
 3. Delete the RDS instance (skip final snapshot for a PoC)
 4. Delete the DB subnet group (`dev-project-db-subnet-group`)
 5. Delete `ec2-sg` and `rds-sg`
-6. Delete the VPC (`dev-project-vpc`) — this also removes its subnets, route table, and IGW
+6. Delete the VPC (`dev-project-vpc`) — this also removes its subnets, route tables, and IGW
 
 ---
 

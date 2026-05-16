@@ -1,6 +1,7 @@
 import requests
 
-SERVER_URL = "http://localhost:8080/message"
+EC2_IP = "44.192.132.202"
+SERVER_URL = f"http://{EC2_IP}/message"
 # For local dev without nginx/gunicorn:
 # SERVER_URL = "http://localhost:5000/message"
 
