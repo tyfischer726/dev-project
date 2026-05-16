@@ -3,7 +3,7 @@
 ## Context
 Moving the phase2 Docker Compose app to AWS. Goal: nginx publicly accessible via an Elastic IP so the local `client.py` can reach it over the internet. Single-instance proof of concept — no orchestration, no load balancer, no scaling. Uses EC2 + Docker Compose (reusing the phase2 setup) with RDS for the database.
 
-Tooling: AWS Console + CLI.
+Tooling: AWS Console for all resource creation. Terminal work (Docker install, git clone, docker compose) done via **EC2 Instance Connect** — the browser-based terminal in the AWS Console (EC2 → your instance → Connect → EC2 Instance Connect tab). No local AWS CLI or SSH needed.
 
 ## Architecture
 
@@ -79,19 +79,19 @@ Console: EC2 → Launch Instance
 - Instance type: `t2.micro`
 - Subnet: any default VPC public subnet
 - Security group: `ec2-sg`
-- Key pair: create or select one for SSH access
+- Key pair: proceed without a key pair (EC2 Instance Connect doesn't need one)
 
-SSH in and install Docker:
+Open a terminal on the instance: Console → EC2 → select your instance → Connect → EC2 Instance Connect tab → Connect.
+
+Install Docker:
 ```bash
-ssh -i <key.pem> ec2-user@<ec2-public-ip>
 sudo dnf update -y
 sudo dnf install -y docker
 sudo systemctl enable --now docker
 sudo usermod -aG docker ec2-user
-# Log out and back in so the docker group takes effect
-exit
-ssh -i <key.pem> ec2-user@<ec2-public-ip>
 ```
+
+For the docker group to take effect, close the EC2 Instance Connect tab and reconnect (same Connect button).
 
 Install Docker Compose plugin:
 ```bash
@@ -107,15 +107,15 @@ Console: EC2 → Elastic IPs → Allocate Elastic IP address → Associate with 
 
 This is the permanent IP your `client.py` will point at.
 
-### 5. Copy Files to EC2
-From your local machine:
+### 5. Clone the Repo on EC2
+In the EC2 Instance Connect terminal:
 ```bash
-scp -i <key.pem> -r /home/ty/Desktop/code/dev-project/phase3/ ec2-user@<elastic-ip>:~/phase3/
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>/phase3
 ```
 
 ### 6. Configure Environment on EC2
 ```bash
-cd ~/phase3
 cp .env.template .env
 nano .env   # fill in DB_PASSWORD and DB_HOST (the RDS endpoint)
 ```
@@ -144,7 +144,7 @@ Run the client locally:
 ```bash
 python3 phase3/client.py
 ```
-Verify rows appear in RDS:
+Verify rows appear in RDS (run in EC2 Instance Connect terminal):
 ```bash
 psql -h <rds-endpoint> -U ty -d devproject -c 'SELECT * FROM messages;'
 ```
@@ -152,16 +152,16 @@ psql -h <rds-endpoint> -U ty -d devproject -c 'SELECT * FROM messages;'
 ---
 
 ## Tear Down
+In EC2 Instance Connect terminal:
 ```bash
-# On EC2
-cd ~/phase3 && docker compose down
-
-# AWS Console (to avoid ongoing charges)
-# 1. Disassociate and release the Elastic IP
-# 2. Terminate the EC2 instance
-# 3. Delete the RDS instance (skip final snapshot for a PoC)
-# 4. Delete ec2-sg and rds-sg
+cd ~/<your-repo>/phase3 && docker compose down
 ```
+
+Then in the AWS Console (to avoid ongoing charges):
+1. Disassociate and release the Elastic IP
+2. Terminate the EC2 instance
+3. Delete the RDS instance (skip final snapshot for a PoC)
+4. Delete `ec2-sg` and `rds-sg`
 
 ---
 
