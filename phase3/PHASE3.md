@@ -8,14 +8,16 @@ Tooling: AWS Console for all resource creation. Terminal work (Docker install, g
 ## Architecture
 
 ```
-[Internet]
-    |
-[Elastic IP] → [EC2 t2.micro : port 80]
-  [Docker Compose]
-    ├── nginx container  (host 80 → container 80)
-    └── server container (port 8000, internal only)
-         |
-[RDS db.t3.micro - PostgreSQL] (default VPC, not publicly accessible)
+dev-project-vpc (10.0.0.0/16)
+├── public subnet 10.0.1.0/24 (AZ-a)
+│     └── EC2 t2.micro ← Elastic IP (port 80)
+│           [Docker Compose]
+│             ├── nginx  (host 80 → container 80)
+│             └── server (port 8000, internal only)
+│                   |
+├── private subnet A 10.0.2.0/24 (AZ-a)  ┐
+└── private subnet B 10.0.3.0/24 (AZ-b)  ┘ DB subnet group
+      └── RDS db.t3.micro (PostgreSQL, not publicly accessible)
 ```
 
 The local `client.py` connects to `http://<elastic-ip>/message`.
@@ -42,20 +44,57 @@ The local `client.py` connects to `http://<elastic-ip>/message`.
 ---
 
 ## Current Status
-**All local files are complete.** Next step: begin AWS setup at Step 1 (Security Groups).
+**All local files are complete.** Next step: begin AWS setup at Step 1 (VPC & Networking).
 
 ---
 
 ## Step-by-Step Deployment
 
-### 1. Security Groups
-Create two security groups in the default VPC (Console: EC2 → Security Groups → Create):
+### 1. VPC & Networking
+Console: VPC → Your VPCs → Create VPC
+
+**Create the VPC:**
+- Name: `dev-project-vpc`
+- IPv4 CIDR: `10.0.0.0/16`
+- Leave everything else default → Create VPC
+
+**Create three subnets** (VPC → Subnets → Create subnet, select `dev-project-vpc`):
+
+| Name | CIDR | AZ | Purpose |
+|------|------|----|---------|
+| `public-a` | `10.0.1.0/24` | AZ-a (e.g. us-east-1a) | EC2 |
+| `private-a` | `10.0.2.0/24` | AZ-a | RDS |
+| `private-b` | `10.0.3.0/24` | AZ-b (e.g. us-east-1b) | RDS (AWS requires 2 AZs for RDS subnet group) |
+
+**Enable auto-assign public IP on the public subnet:**
+Select `public-a` → Actions → Edit subnet settings → Enable auto-assign public IPv4 → Save
+
+**Create an Internet Gateway:**
+- VPC → Internet Gateways → Create → Name: `dev-project-igw` → Create
+- Actions → Attach to VPC → select `dev-project-vpc`
+
+**Add a route to the public subnet's route table:**
+- VPC → Route Tables → find the route table associated with `dev-project-vpc`
+- Routes tab → Edit routes → Add route: `0.0.0.0/0` → Target: `dev-project-igw`
+- Subnet associations tab → Edit → associate `public-a`
+
+(The two private subnets need no route table changes — RDS doesn't need internet access.)
+
+**Create a DB Subnet Group** (done in RDS console, not VPC, but logically belongs here):
+- RDS → Subnet groups → Create DB subnet group
+- Name: `dev-project-db-subnet-group`
+- VPC: `dev-project-vpc`
+- Add subnets: select `private-a` and `private-b`
+- Create
+
+### 2. Security Groups
+Console: EC2 → Security Groups → Create security group. **Set VPC to `dev-project-vpc`** for both.
 
 **ec2-sg**
 | Rule | Port | Source |
 |------|------|--------|
 | Inbound | 80 | `0.0.0.0/0` (nginx, public) |
-| Inbound | 22 | Your IP (SSH) |
+| Inbound | 22 | My IP (EC2 Instance Connect fallback) |
 | Outbound | all | `0.0.0.0/0` |
 
 **rds-sg**
@@ -64,20 +103,20 @@ Create two security groups in the default VPC (Console: EC2 → Security Groups 
 | Inbound | 5432 | `ec2-sg` |
 | Outbound | all | `0.0.0.0/0` |
 
-### 2. RDS — PostgreSQL
+### 3. RDS — PostgreSQL
 Console: RDS → Create database
 - Engine: PostgreSQL, free tier template
 - Instance: `db.t3.micro`, 20 GiB gp2, single-AZ
 - DB name: `devproject`, master username: `ty`, set a password
-- VPC: default VPC; assign `rds-sg`
+- VPC: `dev-project-vpc`; subnet group: `dev-project-db-subnet-group`; security group: `rds-sg`
 - **Disable** public accessibility
 - After creation, note the endpoint hostname → used as `DB_HOST` in `.env`
 
-### 3. EC2 Instance
+### 4. EC2 Instance
 Console: EC2 → Launch Instance
 - AMI: Amazon Linux 2023
 - Instance type: `t2.micro`
-- Subnet: any default VPC public subnet
+- VPC: `dev-project-vpc`; Subnet: `public-a`
 - Security group: `ec2-sg`
 - Key pair: proceed without a key pair (EC2 Instance Connect doesn't need one)
 
@@ -102,32 +141,32 @@ sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 docker compose version   # verify
 ```
 
-### 4. Elastic IP
+### 5. Elastic IP
 Console: EC2 → Elastic IPs → Allocate Elastic IP address → Associate with your EC2 instance.
 
 This is the permanent IP your `client.py` will point at.
 
-### 5. Clone the Repo on EC2
+### 6. Clone the Repo on EC2
 In the EC2 Instance Connect terminal:
 ```bash
 git clone https://github.com/<your-username>/<your-repo>.git
 cd <your-repo>/phase3
 ```
 
-### 6. Configure Environment on EC2
+### 7. Configure Environment on EC2
 ```bash
 cp .env.template .env
 nano .env   # fill in DB_PASSWORD and DB_HOST (the RDS endpoint)
 ```
 
-### 7. Initialize RDS Schema
+### 8. Initialize RDS Schema
 Install the PostgreSQL client on EC2, then run `init.sql`:
 ```bash
 sudo dnf install -y postgresql15
 psql -h <rds-endpoint> -U ty -d devproject -f ~/phase3/init.sql
 ```
 
-### 8. Start the App
+### 9. Start the App
 ```bash
 cd ~/phase3
 docker compose up --build -d
@@ -135,7 +174,7 @@ docker compose ps       # both containers should be Up
 docker compose logs -f  # tail logs to verify no errors
 ```
 
-### 9. Test End-to-End
+### 10. Test End-to-End
 Update `SERVER_URL` in your local `phase3/client.py`:
 ```python
 SERVER_URL = "http://<elastic-ip>/message"
@@ -161,7 +200,9 @@ Then in the AWS Console (to avoid ongoing charges):
 1. Disassociate and release the Elastic IP
 2. Terminate the EC2 instance
 3. Delete the RDS instance (skip final snapshot for a PoC)
-4. Delete `ec2-sg` and `rds-sg`
+4. Delete the DB subnet group (`dev-project-db-subnet-group`)
+5. Delete `ec2-sg` and `rds-sg`
+6. Delete the VPC (`dev-project-vpc`) — this also removes its subnets, route table, and IGW
 
 ---
 
