@@ -73,12 +73,15 @@ Select `public-a` → Actions → Edit subnet settings → Enable auto-assign pu
 - VPC → Internet Gateways → Create → Name: `dev-project-igw` → Create
 - Actions → Attach to VPC → select `dev-project-vpc`
 
-**Add a route to the public subnet's route table:**
-- VPC → Route Tables → find the route table associated with `dev-project-vpc`
-- Routes tab → Edit routes → Add route: `0.0.0.0/0` → Target: `dev-project-igw`
-- Subnet associations tab → Edit → associate `public-a`
+**Create a custom route table for the public subnet:**
+- VPC → Route Tables → Create route table
+- Name: `public-rt`, VPC: `dev-project-vpc` → Create
+- Routes tab → Edit routes → Add route: `0.0.0.0/0` → Target: `dev-project-igw` → Save
+- Subnet associations tab → Edit → associate `public-a` → Save
 
-(The two private subnets need no route table changes — RDS doesn't need internet access.)
+This overrides the main route table for `public-a` only. The private subnets stay implicitly on the main route table, which has only the local route — meaning no internet access for RDS.
+
+**Important:** Do not add the IGW route to the main route table. The main route table should have only the `10.0.0.0/16 → local` rule that AWS created automatically. Adding the IGW route there would give all subnets internet routing, including the private ones.
 
 **Create a DB Subnet Group** (done in RDS console, not VPC, but logically belongs here):
 - RDS → Subnet groups → Create DB subnet group
