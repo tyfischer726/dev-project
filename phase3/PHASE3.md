@@ -97,7 +97,7 @@ Console: EC2 → Security Groups → Create security group. **Set VPC to `dev-pr
 | Rule | Port | Source |
 |------|------|--------|
 | Inbound | 80 | `0.0.0.0/0` (nginx, public) |
-| Inbound | 22 | `18.206.107.24/29` (EC2 Instance Connect IP range for us-east-1) |
+| Inbound | 22 | Select "com.amazonaws.<region>.ec2-instance-connect |
 | Outbound | all | `0.0.0.0/0` |
 
 Note: browser-based EC2 Instance Connect routes through AWS's servers, not your local IP — so the SSH rule must allow AWS's IP range, not "My IP". The range above is specific to us-east-1.
