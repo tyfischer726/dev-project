@@ -15,9 +15,9 @@ curl -SL https://github.com/docker/compose/releases/latest/download/docker-compo
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Docker Buildx plugin
-BUILDX_URL=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest \
-  | grep 'browser_download_url.*linux-amd64"' | cut -d'"' -f4)
-curl -SL "$BUILDX_URL" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+curl -SL $(curl -s https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep "browser_download_url.*linux-amd64\"" | cut -d'"' -f4) \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
 chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
 # Clone repo
