@@ -1,6 +1,4 @@
 #!/bin/bash
-set -euo pipefail
-exec > /var/log/user-data.log 2>&1
 
 # Install Docker and git
 dnf update -y

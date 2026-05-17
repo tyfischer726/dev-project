@@ -32,24 +32,24 @@ dev-project-vpc (10.0.0.0/16)
 | `ec2.tf` | EC2 instance; renders `user_data.sh` via `templatefile()` |
 | `user_data.sh` | Bootstrap script: Docker, git clone, `.env`, wait for RDS, `init.sql`, `docker compose up` |
 | `outputs.tf` | Prints `ec2_public_ip` and `rds_endpoint` after apply |
-| `client.py` | Local client — fill in `EC2_IP` after `terraform apply` |
 
 ## How `user_data.sh` works
 
 Terraform's `templatefile()` renders `user_data.sh` before sending it to EC2, substituting `${db_host}`, `${db_name}`, `${db_username}`, and `${db_password}` with real values. The resulting script runs once automatically on first boot and:
 
-1. Installs Docker, Docker Compose plugin, and Docker Buildx plugin
-2. `git clone`s this repo to `/home/ec2-user/dev-project`
-3. Writes `.env` into `phase3/` with the RDS credentials
-4. Installs `postgresql15` client and polls `pg_isready` until RDS accepts connections
-5. Runs `init.sql` to create the `messages` table
-6. Runs `docker compose up --build -d`
+1. Updates packages and installs Docker and git
+2. Installs the Docker Compose plugin and Docker Buildx plugin
+3. `git clone`s this repo to `/home/ec2-user/dev-project`
+4. Writes `.env` into `phase3/` with the RDS credentials
+5. Installs `postgresql15` client and polls `pg_isready` until RDS accepts connections
+6. Runs `init.sql` to create the `messages` table
+7. Runs `docker compose up --build -d`
 
 Boot-to-ready takes roughly 10–15 minutes (dominated by RDS provisioning).
 
 ---
 
-## Next Steps
+## Steps
 
 ### 1. Install Terraform (local, one-time)
 
@@ -108,15 +108,7 @@ cd phase3/iac
 terraform init
 ```
 
-### 5. Preview the deployment
-
-```bash
-terraform plan
-```
-
-Review the output — it lists every resource that will be created. No changes are made yet.
-
-### 6. Deploy
+### 5. Deploy
 
 ```bash
 terraform apply
@@ -129,33 +121,32 @@ ec2_public_ip = "x.x.x.x"
 rds_endpoint  = "dev-project-db.xxxx.us-east-1.rds.amazonaws.com"
 ```
 
-### 7. Wait for EC2 to finish bootstrapping
+### 6. Wait for EC2 to finish bootstrapping
 
 The EC2 instance is "running" within a minute, but `user_data.sh` is still installing Docker, waiting for RDS, and starting the app in the background. Give it **~10 minutes** from when `terraform apply` completes.
 
 To watch the bootstrap log in real time via EC2 Instance Connect:
 - AWS Console → EC2 → your instance → Connect → EC2 Instance Connect
 ```bash
-sudo tail -f /var/log/user-data.log
+sudo tail -f /var/log/cloud-init-output.log
 ```
-The last line will be the `docker compose up` output when it's done.
 
-### 8. Update client.py and test
+### 7. Run the client
 
-Fill in the IP from step 6:
+Copy the `ec2_public_ip` from step 5 into `phase3/client.py`:
 
 ```python
-# phase3/iac/client.py
+# phase3/client.py
 EC2_IP = "x.x.x.x"
 ```
 
 Then run:
 
 ```bash
-python3 phase3/iac/client.py
+python3 phase3/client.py
 ```
 
-### 9. Tear down
+### 8. Tear down
 
 ```bash
 terraform destroy
@@ -163,4 +154,11 @@ terraform destroy
 
 Type `yes`. Destroys all resources in reverse dependency order. Takes a few minutes.
 
-> **Note:** The EC2 auto-assigned public IP changes each time you run `terraform apply` (or stop/start the instance). Update `EC2_IP` in `client.py` after each fresh deploy. If you want a stable IP across deploys, an Elastic IP can be added to `ec2.tf`.
+---
+
+## Notes
+
+- **No Elastic IP** — the EC2 public IP changes on each fresh `terraform apply`. Update `EC2_IP` in `phase3/client.py` each time. Add an Elastic IP to `ec2.tf` if you want a stable address.
+- **AMI filter** — `ec2.tf` uses the pattern `al2023-ami-2023*-x86_64` to select the standard Amazon Linux 2023 AMI. The broader pattern `al2023-ami-*-x86_64` also matches the minimal variant, which does not include `ec2-instance-connect` and will silently break EC2 Instance Connect.
+- **`user_data.sh` template vars** — Terraform substitutes `${db_host}` etc. at apply time via `templatefile()`. Bash variables in the script use `$VAR` (no braces) to avoid conflicts with Terraform's syntax.
+- **Bootstrap progress** — `user_data.sh` runs as root on first boot. Tail `/var/log/cloud-init-output.log` via EC2 Instance Connect to watch progress.

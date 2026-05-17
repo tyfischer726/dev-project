@@ -155,23 +155,27 @@ kubectl exec -it <db-pod-name> -- psql -U ty -d devproject -c "SELECT * FROM mes
 
 ## Running on AWS (EC2 + RDS)
 
-All AWS files live in `phase3/`. Full step-by-step deployment instructions are in `phase3/PHASE3.md`.
-
 The setup runs nginx + server as Docker Compose containers on a single EC2 t2.micro, with RDS PostgreSQL as the database. The local `client.py` connects to the EC2 public IP over the internet.
 
-**Key details:**
-- All AWS resources are configured via the AWS Console — no local AWS CLI needed
-- Terminal work on EC2 (Docker install, git clone, docker compose) is done via EC2 Instance Connect (browser-based terminal in the Console)
-- A custom VPC (`dev-project-vpc`) is used instead of the default VPC: EC2 sits in a public subnet, RDS in private subnets with no internet route
-- The SSH inbound rule for EC2 must use the EC2 Instance Connect IP range (`18.206.107.24/29` for us-east-1), not "My IP" — browser-based Instance Connect routes through AWS's servers
-- Amazon Linux 2023's bundled Docker Buildx is too old for the latest Docker Compose plugin — install the latest buildx from GitHub (see PHASE3.md Step 4)
-- RDS requires a DB subnet group with subnets in at least 2 AZs, even for a single-AZ deployment
-- The `devproject` database must be created under **Additional configuration** during RDS setup, or manually via `psql` afterwards
+### Option A: Terraform (recommended)
 
-**Restart containers after stopping:**
+All Terraform files live in `phase3/iac/`. Full instructions in `phase3/iac/IAC.md`.
+
 ```bash
-docker compose up -d   # no --build needed unless code changed
+cd phase3/iac
+terraform init
+terraform apply        # ~10–15 min; prints ec2_public_ip when done
+# set EC2_IP in phase3/client.py, then:
+python3 phase3/client.py
+
+terraform destroy      # tear everything down when done
 ```
+
+### Option B: Manual (AWS Console)
+
+All files live in `phase3/`. Full step-by-step in `phase3/PHASE3.md`.
+
+Resources are created via the AWS Console; Docker and the app are set up via EC2 Instance Connect (browser-based terminal in the Console).
 
 ## Database
 
