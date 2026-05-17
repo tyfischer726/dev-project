@@ -54,31 +54,42 @@ Boot-to-ready takes roughly 10–15 minutes (dominated by RDS provisioning).
 ### 1. Install Terraform (local, one-time)
 
 ```bash
-sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
-wget -qO- https://apt.releases.hashicorp.com/gpg | \
-  gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-  https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
-  sudo tee /etc/apt/sources.list.d/hashicorp.list
-sudo apt-get update && sudo apt-get install -y terraform
+sudo snap install terraform --classic
 terraform version   # verify
 ```
 
 ### 2. Configure AWS credentials (local, one-time)
 
-Terraform needs AWS credentials to create resources. Get them from:
-AWS Console → top-right menu → Security credentials → Access keys → Create access key
+Terraform needs AWS credentials to create resources. This project uses IAM Identity Center (SSO).
 
 If you don't have the AWS CLI:
 ```bash
 sudo apt-get install -y awscli
 ```
 
-Then configure it:
+Configure SSO (one-time setup):
 ```bash
-aws configure
-# prompts for: Access Key ID, Secret Access Key, region (us-east-1), output format (json)
+aws configure sso
+# SSO session name: dev (or anything)
+# SSO start URL:    https://something.awsapps.com/start  (your portal URL)
+# SSO region:       us-east-1
+# Opens browser to authenticate — pick your account and permission set
+# Default region:   us-east-1
+# Output format:    json
+# Profile name:     dev
 ```
+
+Then log in:
+```bash
+aws sso login --profile dev
+```
+
+Set the profile for Terraform (repeat each terminal session):
+```bash
+export AWS_PROFILE=dev
+```
+
+> **Note:** SSO sessions expire (typically every 8–12 hours). Re-run `aws sso login --profile dev` when prompted.
 
 ### 3. Set your DB password
 
