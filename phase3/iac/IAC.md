@@ -54,10 +54,13 @@ Boot-to-ready takes roughly 10–15 minutes (dominated by RDS provisioning).
 ### 1. Install Terraform (local, one-time)
 
 ```bash
-# macOS
-brew install terraform
-
-# or download directly: https://developer.hashicorp.com/terraform/install
+sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
+wget -qO- https://apt.releases.hashicorp.com/gpg | \
+  gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+  https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+  sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update && sudo apt-get install -y terraform
 terraform version   # verify
 ```
 
@@ -66,12 +69,16 @@ terraform version   # verify
 Terraform needs AWS credentials to create resources. Get them from:
 AWS Console → top-right menu → Security credentials → Access keys → Create access key
 
+If you don't have the AWS CLI:
+```bash
+sudo apt-get install -y awscli
+```
+
+Then configure it:
 ```bash
 aws configure
 # prompts for: Access Key ID, Secret Access Key, region (us-east-1), output format (json)
 ```
-
-If you don't have the AWS CLI: `brew install awscli` first.
 
 ### 3. Set your DB password
 
