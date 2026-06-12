@@ -6,7 +6,11 @@ A simple client-server-database app for learning purposes. Type a message in the
 
 - Python 3.14, Flask, Gunicorn, nginx
 - PostgreSQL 18
-- pytest, flake8 (CI)
+- Docker, Docker Compose
+- Kubernetes (minikube)
+- Terraform (AWS IaC)
+- AWS (EC2 t2.micro, RDS PostgreSQL)
+- GitHub Actions (CI: pytest + flake8)
 - Claude Code
 
 ## Running with Docker
